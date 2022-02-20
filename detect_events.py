@@ -26,6 +26,7 @@ if __name__ == '__main__':
     p.add_argument('--t', metavar='theta', type=float, help='Theta, default to 0.6', default=0.6)
     p.add_argument('--s', metavar='sigma', type=float, help='Sigma, default to 0.6', default=0.6)
     p.add_argument('--code', metavar='sigma', type=str, help='Encoding', default='utf-8')
+    p.add_argument('--tt', metavar='sigma', type=str, help='The name of the header in the csv', default='fulltext')
     args = p.parse_args()
     print('Parameters:')
     print('   Corpus: %s\n   k: %d\n   Stop-words: %s\n   Min. abs. word frequency: %d\n   Max. rel. word frequency: %f' %

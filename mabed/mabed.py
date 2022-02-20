@@ -114,7 +114,7 @@ class MABED:
 
     def anomaly(self, time_slice, observation, total_mention_freq):
         # compute the expected frequency of the given word at this time-slice
-        expectation = float(self.corpus.tweet_count[time_slice]) * (float(total_mention_freq)/(float(self.corpus.size)))
+        expectation = float(self.corpus.article_count[time_slice]) * (float(total_mention_freq)/(float(self.corpus.size)))
 
         # return the difference between the observed frequency and the expected frequency
         return observation - expectation
@@ -161,12 +161,14 @@ class MABED:
             main_word = event[2]
             main_term = main_word
             descriptions = []
-            for component in components:
-                if main_word in component:
-                    main_term = ', '.join(component)
-                    for node in component:
-                        descriptions.append(self.redundancy_graph._node[node]['description'])
-                    break
+            # for component in components:
+            #     if main_word in component:
+            #         print(main_term)
+            #         print(component)
+            #         main_term = ', '.join("(%s,%s)" % comp for comp in component)
+            #         for node in component:
+            #             descriptions.append(self.redundancy_graph._node[node]['description'])
+            #         break
             if len(descriptions) == 0:
                 related_words = event[3]
             else:
@@ -191,7 +193,8 @@ class MABED:
     def print_event(self, event):
         related_words = []
         for related_word, weight in event[3]:
-            related_words.append(related_word+'('+str("{0:.2f}".format(weight))+')')
+            print(related_word)
+            related_words.append(related_word[0]+'('+str("{0:.2f}".format(weight))+')')
         print('   %s - %s: %s (%s)' % (str(self.corpus.to_date(event[1][0])),
                                        str(self.corpus.to_date(event[1][1])),
                                        event[2],

@@ -7,6 +7,7 @@ import csv
 import os
 import shutil
 import pickle
+import nltk, re
 
 # math
 import numpy as np
@@ -15,19 +16,23 @@ from scipy.sparse import *
 # mabed
 import mabed.utils as utils
 
+import huspacy
+
 __authors__ = "Adrien Guille, Nicolas Dugué"
 __email__ = "adrien.guille@univ-lyon2.fr"
 
 
 class Corpus:
 
-    def __init__(self, source_file_path, stopwords_file_path, min_absolute_freq=10, max_relative_freq=0.4, separator=',', save_voc=False, code='utf-8'):
+    def __init__(self, source_file_path, stopwords_file_path, min_absolute_freq=10, max_relative_freq=0.4, separator=',', save_voc=False, code='utf-8',target_text='fulltext'):
         self.source_file_path = source_file_path
         self.size = 0
         self.start_date = '3000-01-01 00:00:00'
         self.end_date = '1000-01-01 00:00:00'
         self.separator = separator
         self.code = code
+        self.target_text = target_text
+        self.nlp = huspacy.load(disable=['parser', 'lemmatizer', 'textcat'])	
 
         # load stop-words
         self.stopwords = utils.load_stopwords(stopwords_file_path, code)
@@ -36,7 +41,7 @@ class Corpus:
         with open(source_file_path, 'r', encoding=code) as input_file:
             csv_reader = csv.reader(input_file, delimiter=self.separator)
             header = next(csv_reader)
-            text_column_index = header.index('title')
+            text_column_index = header.index(self.target_text)
             date_column_index = header.index('published')
             word_frequency = {}
             for line in csv_reader:
@@ -64,9 +69,15 @@ class Corpus:
             vocabulary_size = 0
             # construct the vocabulary map
             for word, frequency in vocabulary:
-                if frequency > min_absolute_freq and float(frequency / self.size) < max_relative_freq: #and word not in self.stopwords:
+                # print(word[0])
+                # ok = word[0] not in self.stopwords
+                # if ok == False:
+                #     print(word[0])
+                if frequency > min_absolute_freq and float(frequency / self.size) < max_relative_freq and word[0] not in self.stopwords and word[1] not in self.stopwords:
                     self.vocabulary[word] = vocabulary_size
                     vocabulary_size += 1
+
+            # print(vocabulary)
             self.start_date = datetime.strptime(self.start_date, "%Y-%m-%dT%H:%M:%S.%f%z")
             self.end_date = datetime.strptime(self.end_date, "%Y-%m-%dT%H:%M:%S.%f%z")
 
@@ -75,7 +86,7 @@ class Corpus:
                                                                     self.end_date))
             print('   Vocabulary: %d distinct words' % vocabulary_size)
             self.time_slice_count = None
-            self.tweet_count = None
+            self.article_count = None
             self.global_freq = None
             self.mention_freq = None
             self.time_slice_length = None
@@ -92,7 +103,7 @@ class Corpus:
         time_delta = (self.end_date - self.start_date)
         time_delta = time_delta.total_seconds()/60
         self.time_slice_count = int(time_delta // self.time_slice_length) + 1
-        self.tweet_count = np.zeros(self.time_slice_count)
+        self.article_count = np.zeros(self.time_slice_count)
         print('   Number of time-slices: %d' % self.time_slice_count)
 
         # create empty files
@@ -106,18 +117,18 @@ class Corpus:
         with open(self.source_file_path, 'r', encoding=self.code) as input_file:
             csv_reader = csv.reader(input_file, delimiter=self.separator)
             header = next(csv_reader)
-            text_column_index = header.index('title')
+            text_column_index = header.index(self.target_text)
             date_column_index = header.index('published')
             for line in csv_reader:
                 tweet_date = datetime.strptime(line[date_column_index], "%Y-%m-%dT%H:%M:%S.%f%z")
                 time_delta = (tweet_date - self.start_date)
                 time_delta = time_delta.total_seconds() / 60
                 time_slice = int(time_delta / self.time_slice_length)
-                self.tweet_count[time_slice] += 1
+                self.article_count[time_slice] += 1
                 # tokenize the tweet and update word frequency
-                tweet_text = line[text_column_index]
-                words = self.tokenize(tweet_text)
-                mention = '@' in tweet_text
+                article_text = line[text_column_index]
+                words = self.tokenize(article_text)
+                mention = '@' in article_text
                 for word in set(words):
                     word_id = self.vocabulary.get(word)
                     if word_id is not None:
@@ -125,7 +136,7 @@ class Corpus:
                         if mention:
                             self.mention_freq[word_id, time_slice] += 1
                 with open('corpus/' + str(time_slice), 'a', encoding=self.code) as time_slice_file:
-                    time_slice_file.write(tweet_text+'\n')
+                    time_slice_file.write(article_text+'\n')
         self.global_freq = self.global_freq.tocsr()
         self.mention_freq = self.mention_freq.tocsr()
 
@@ -134,10 +145,23 @@ class Corpus:
         return a_date
 
     def tokenize(self, text):
+
+        text = re.sub(r'[^\w\s]', '', text)
+        doc = self.nlp(text)
+
+        nerLabels = ["PER", "GPE", "NORP", "ORG", "EVENT", "FAC", "LOC"]
+        nerTag = [token.text for token in doc.ents if token.label_ in nerLabels]
+        text = " ".join(nerTag)
+
+        nltk_tokens = nltk.word_tokenize(text)
+        bigrams = list(nltk.bigrams(nltk_tokens))
+
+        return list(bigrams)
+
         # split the documents into tokens based on whitespaces
         raw_tokens = text.split()
-        # trim punctuation and convert to lower case
-        return [token.strip(string.punctuation).lower() for token in raw_tokens if len(token) > 1 and 'http' not in token]
+        # trim punctuation
+        return [token.strip(string.punctuation) for token in raw_tokens if len(token) > 1 and 'http' not in token]
 
     def cooccurring_words(self, event, p):
         main_word = event[2]
