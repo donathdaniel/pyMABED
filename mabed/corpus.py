@@ -24,7 +24,7 @@ __email__ = "adrien.guille@univ-lyon2.fr"
 
 class Corpus:
 
-    def __init__(self, source_file_path, stopwords_file_path, min_absolute_freq=10, max_relative_freq=0.4, separator=',', save_voc=False, code='utf-8',target_text='clean_fulltext'):
+    def __init__(self, source_file_path, stopwords_file_path, min_absolute_freq=10, max_relative_freq=0.4, separator=',', save_voc=False, code='utf-8',target_text='fulltext'):
         self.source_file_path = source_file_path
         self.size = 0
         self.start_date = '3000-01-01 00:00:00'
@@ -146,22 +146,15 @@ class Corpus:
         return a_date
 
     def tokenize(self, text):
-
-        text = re.sub(r'[^\w\s]', '', text)
-        # doc = self.nlp(text)
-
-        # nerLabels = ["PER", "GPE", "NORP", "ORG", "EVENT", "FAC", "LOC"]
-        # nerTag = [token.text for token in doc.ents if token.label_ in nerLabels]
-        # text = " ".join(nerTag)
-
-        nltk_tokens = nltk.word_tokenize(text)
-
-        return list(nltk.bigrams(nltk_tokens))
-
-        # split the documents into tokens based on whitespaces
-        raw_tokens = text.split()
         # trim punctuation
-        return [token.strip(string.punctuation) for token in raw_tokens if len(token) > 1 and 'http' not in token]
+        text = re.sub(r'[^\w\s]', '', text)
+
+        # filter ner
+        doc = self.nlp(text)
+        ner_tag = [token.text for token in doc.ents if token.label_ in self.ner_labels]
+
+        # nltk_tokens = nltk.word_tokenize(text)
+        return ner_tag
 
     def cooccurring_words(self, event, p):
         main_word = event[2]
