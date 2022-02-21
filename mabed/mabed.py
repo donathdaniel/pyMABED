@@ -193,8 +193,7 @@ class MABED:
     def print_event(self, event):
         related_words = []
         for related_word, weight in event[3]:
-            print(related_word)
-            related_words.append(related_word[0]+'('+str("{0:.2f}".format(weight))+')')
+            related_words.append(' '.join(related_word)+'('+str("{0:.2f}".format(weight))+')')
         print('   %s - %s: %s (%s)' % (str(self.corpus.to_date(event[1][0])),
                                        str(self.corpus.to_date(event[1][1])),
                                        event[2],

@@ -24,7 +24,7 @@ __email__ = "adrien.guille@univ-lyon2.fr"
 
 class Corpus:
 
-    def __init__(self, source_file_path, stopwords_file_path, min_absolute_freq=10, max_relative_freq=0.4, separator=',', save_voc=False, code='utf-8',target_text='fulltext'):
+    def __init__(self, source_file_path, stopwords_file_path, min_absolute_freq=10, max_relative_freq=0.4, separator=',', save_voc=False, code='utf-8',target_text='clean_fulltext'):
         self.source_file_path = source_file_path
         self.size = 0
         self.start_date = '3000-01-01 00:00:00'
@@ -33,6 +33,7 @@ class Corpus:
         self.code = code
         self.target_text = target_text
         self.nlp = huspacy.load(disable=['parser', 'lemmatizer', 'textcat'])	
+        self.ner_labels = ["PER", "GPE", "NORP", "ORG", "EVENT", "FAC", "LOC"]
 
         # load stop-words
         self.stopwords = utils.load_stopwords(stopwords_file_path, code)
@@ -147,16 +148,15 @@ class Corpus:
     def tokenize(self, text):
 
         text = re.sub(r'[^\w\s]', '', text)
-        doc = self.nlp(text)
+        # doc = self.nlp(text)
 
-        nerLabels = ["PER", "GPE", "NORP", "ORG", "EVENT", "FAC", "LOC"]
-        nerTag = [token.text for token in doc.ents if token.label_ in nerLabels]
-        text = " ".join(nerTag)
+        # nerLabels = ["PER", "GPE", "NORP", "ORG", "EVENT", "FAC", "LOC"]
+        # nerTag = [token.text for token in doc.ents if token.label_ in nerLabels]
+        # text = " ".join(nerTag)
 
         nltk_tokens = nltk.word_tokenize(text)
-        bigrams = list(nltk.bigrams(nltk_tokens))
 
-        return list(bigrams)
+        return list(nltk.bigrams(nltk_tokens))
 
         # split the documents into tokens based on whitespaces
         raw_tokens = text.split()
